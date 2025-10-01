@@ -28,7 +28,7 @@ int main() {
         close(pipe2[0]);  // закрываем конец pipe2 для чтения
 
         dup2(pipe1[0], STDIN_FILENO);   // stdin = pipe1
-        dup2(pipe2[1], STDOUT_FILENO);  // stdout = pipe2
+        dup2(pipe2[1], STDERR_FILENO);  // stdout = pipe2
 
         close(pipe1[0]); // по сути убираем дубликаты ссылок поскольку теперь stdin и stdout указывают туда же
         close(pipe2[1]);
@@ -54,6 +54,11 @@ int main() {
         buffer[strcspn(buffer, "\n")] = '\0'; //"Hello\n\0" -> "Hello\0"
 
         // Отправляем имя файла Child
+
+        if (strlen(buffer) == 0) {
+            fprintf(stderr, "Ошибка: имя файла не может быть пустым\n");
+            exit(EXIT_FAILURE);
+        }
         write(pipe1[1], buffer, strlen(buffer));
         write(pipe1[1], "\n", 1);  // обязательно \n тк fgets в Child читает до /n
 
@@ -73,14 +78,14 @@ int main() {
 
 
         close(pipe1[1]); //чтобы в Child fgets не ждал бесконечно новых данных из pipe 
-
+        //поскольку я читаю из pipe то надо использовать read посокльку это не stdin/out/err
         while ((r = read(pipe2[0], errbuf, sizeof(errbuf) - 1)) > 0){  //р читает из pipe и пишет в r - кол-во байтов прочитаных, 0 - конец файла(EOF), -1 -ошибка чтения
             errbuf[r] = '\0';
             printf("%s", errbuf);
         }  
 
         close(pipe2[0]);
-        wait(NULL);
+        wait(NULL); //удалить запись в таблице процессов, дочернего процеса
     }
 
     return 0;
