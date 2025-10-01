@@ -3,6 +3,7 @@
 #include <stdlib.h> //EXIT_FAILURE
 #include <string.h> //для работы со стороками 
 #include <ctype.h> //для работы с чарами, isupper
+#include <fcntl.h>   // open()
 
 
 #define BUFSZ 256
@@ -13,32 +14,35 @@ int main() {
     if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
         const char *msg = "Не удалось прочитать имя файла\n";
         write(STDERR_FILENO, msg, strlen(msg));
-
         return 1;
     }
     buffer[strcspn(buffer, "\n")] = '\0';
 
-    FILE *fp = fopen(buffer, "w");
-    if (!fp) {
-        perror("fopen");
+    int fd = open(buffer, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1) {
+        perror("open");
         return 1;
     }
+
+    // перенаправляем stdout в файл
+    dup2(fd, STDOUT_FILENO);
+    close(fd);
+
 
     while (fgets(buffer, sizeof(buffer), stdin) != NULL) {
         buffer[strcspn(buffer, "\n")] = '\0';
 
         if (isupper((unsigned char)buffer[0])) {
-            fprintf(fp, "%s\n", buffer);
-            fflush(fp);
+            printf("%s\n", buffer);
+            fflush(stdout);
         } else {
             char err[BUFSZ];
             sprintf(err, "Error: строка должна начинаться с заглавной буквы - '%s'\n", buffer);
-
-            write(STDOUT_FILENO, err, strlen(err));
+            write(STDERR_FILENO, err, strlen(err));
 
         }
     }
 
-    fclose(fp);
+    
     return 0;
 }
