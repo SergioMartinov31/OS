@@ -1,10 +1,9 @@
-#include <stdio.h> // стандартный ввод/вывод(printf(),scanf()) + работа с файлами(fopen(),fclose()) 
-#include <unistd.h> //доступ к pipe, fork и всем командам для ОС 
-#include <stdlib.h> //EXIT_FAILURE
-#include <string.h> //для работы со стороками 
-#include <ctype.h> //для работы с чарами, isupper
-#include <fcntl.h>   // open()
-
+#include <ctype.h>  //для работы с чарами, isupper
+#include <fcntl.h>  // open()
+#include <stdio.h>  // стандартный ввод/вывод(printf(),scanf()) + работа с файлами(fopen(),fclose())
+#include <stdlib.h>  //EXIT_FAILURE
+#include <string.h>  //для работы со стороками
+#include <unistd.h>  //доступ к pipe, fork и всем командам для ОС
 
 #define BUFSZ 256
 
@@ -25,9 +24,12 @@ int main() {
     }
 
     // перенаправляем stdout в файл
-    dup2(fd, STDOUT_FILENO);
+    if (dup2(fd, STDOUT_FILENO) == -1) {
+        perror("dup2");
+        close(fd);
+        return 1;
+    }
     close(fd);
-
 
     while (fgets(buffer, sizeof(buffer), stdin) != NULL) {
         buffer[strcspn(buffer, "\n")] = '\0';
@@ -39,10 +41,8 @@ int main() {
             char err[BUFSZ];
             sprintf(err, "Error: строка должна начинаться с заглавной буквы - '%s'\n", buffer);
             write(STDERR_FILENO, err, strlen(err));
-
         }
     }
 
-    
     return 0;
 }
